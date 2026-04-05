@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { StyleSheet, Text, View, Image, ScrollView, Alert, Modal, TouchableOpacity } from 'react-native'
+import { StyleSheet, Text, View, Image, ScrollView, Alert, Modal } from 'react-native'
+import { Button, Surface } from 'react-native-paper'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Button } from 'react-native-paper'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 export default function DetalhesScreen({ route }) {
   const { carta } = route.params || {}
@@ -10,14 +11,14 @@ export default function DetalhesScreen({ route }) {
 
   if (!carta) {
     return (
-      <View style={styles.containerErro}>
-        <Text style={styles.textoErro}>Erro: Nenhuma carta encontrada.</Text>
+      <View style={[styles.container, styles.centerScreen]}>
+        <Text style={styles.textoErro}>Erro no sistema: Nenhuma carta encontrada.</Text>
       </View>
     )
   }
 
   const iniciarSalvamento = () => {
-    if (carta.tcgplayer && carta.tcgplayer.prices) {
+    if (carta.tcgplayer?.prices) {
       const tipos = Object.keys(carta.tcgplayer.prices)
 
       if (tipos.length > 1) {
@@ -37,136 +38,175 @@ export default function DetalhesScreen({ route }) {
     setModalVisivel(false)
 
     try {
-      const cartasSalvasJSON = await AsyncStorage.getItem('@minhasCartas')
-      let cartasSalvas = cartasSalvasJSON ? JSON.parse(cartasSalvasJSON) : []
+      const data = await AsyncStorage.getItem('@minhasCartas')
+      let cartas = data ? JSON.parse(data) : []
 
-      const copiaDaCarta = {
+      cartas.push({
         ...carta,
         idInstancia: `${carta.id}-${Date.now()}`,
         varianteSalva: variante
-      }
+      })
 
-      cartasSalvas.push(copiaDaCarta)
-      await AsyncStorage.setItem('@minhasCartas', JSON.stringify(cartasSalvas))
-
-      const nomeFormatado = variante !== 'Padrão' ? ` (${variante.charAt(0).toUpperCase() + variante.slice(1)})` : ''
-      Alert.alert('Sucesso', `Carta${nomeFormatado} adicionada à coleção!`)
-    } catch (error) {
-      console.error(error)
-      Alert.alert('Erro', 'Não foi possível salvar a carta.')
+      await AsyncStorage.setItem('@minhasCartas', JSON.stringify(cartas))
+      Alert.alert('Capturada!', `Carta (${variante}) adicionada à Pokédex!`)
+    } catch {
+      Alert.alert('Erro ao salvar', 'O banco de dados falhou.')
     }
   }
 
-  const renderizarPrecos = () => {
-    let precosEncontrados = []
+const renderizarPrecos = () => {
+    const elementosPreco = []
 
-    if (carta.tcgplayer && carta.tcgplayer.prices) {
-      Object.keys(carta.tcgplayer.prices).forEach((tipo) => {
-        const dadosPreco = carta.tcgplayer.prices[tipo]
-        const valor = dadosPreco.mid || dadosPreco.market || dadosPreco.low
-
+    if (carta.tcgplayer?.prices) {
+      Object.entries(carta.tcgplayer.prices).forEach(([tipo, dados]) => {
+        const valor = dados.mid || dados.market || dados.low
         if (valor) {
-          const nomeFormatado = tipo.charAt(0).toUpperCase() + tipo.slice(1)
-          precosEncontrados.push(`${nomeFormatado}: $${valor.toFixed(2)}`)
+          elementosPreco.push(
+            <Text key={`tcg-${tipo}`} style={styles.preco}>
+              TCG ({tipo.toUpperCase()}): ${valor.toFixed(2)}
+            </Text>
+          )
         }
       })
     }
 
-    if (precosEncontrados.length === 0 && carta.cardmarket?.prices?.averageSellPrice) {
-      precosEncontrados.push(`Cardmarket (Média): $${carta.cardmarket.prices.averageSellPrice.toFixed(2)}`)
+    if (carta.cardmarket?.prices) {
+      const cm = carta.cardmarket.prices
+
+      if (cm.trendPrice) {
+        elementosPreco.push(
+          <Text key="cm-trend" style={styles.preco}>
+            CardMarket: €{cm.trendPrice.toFixed(2)}
+          </Text>
+        )
+      }
+
+      if (cm.reverseHoloTrend) {
+        elementosPreco.push(
+          <Text key="cm-rev-trend" style={styles.preco}>
+            CardMarket REV. HOLO: €{cm.reverseHoloTrend.toFixed(2)}
+          </Text>
+        )
+      }
     }
 
-    if (precosEncontrados.length > 0) {
-      return precosEncontrados.map((preco, index) => (
-        <Text key={index} style={styles.precoDinâmico}>{preco}</Text>
-      ))
-    } else {
-      return <Text style={styles.precoDinâmico}>Sem dados de mercado</Text>
+    if (elementosPreco.length === 0) {
+      return <Text style={styles.preco}>SEM DADOS DE MERCADO</Text>
     }
+
+    return elementosPreco
   }
-
+  
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.imagemContainer}>
-        <Image
-          source={{ uri: carta.images?.large }}
-          style={styles.imagemCarta}
-          resizeMode="contain"
-        />
+      <View style={styles.pokedexHeader}>
+        <View style={styles.bigLightBorder}>
+          <View style={styles.bigBlueLight} />
+        </View>
+
+        <View style={styles.smallLightsContainer}>
+          <View style={[styles.smallLight, { backgroundColor: '#ef4444' }]} />
+          <View style={[styles.smallLight, { backgroundColor: '#facc15' }]} />
+          <View style={[styles.smallLight, { backgroundColor: '#22c55e' }]} />
+        </View>
       </View>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.nomeCarta}>{carta.name}</Text>
-        <Text style={styles.subtitulo}>
-          HP: {carta.hp || 'N/A'} | Tipo: {carta.types ? carta.types.join(', ') : 'N/A'}
-        </Text>
-      </View>
+      <Surface style={styles.visorPrincipal} elevation={4}>
+        <View style={styles.imagemContainer}>
+          <Image source={{ uri: carta.images?.large }} style={styles.imagemCarta} />
+        </View>
+
+        <Surface style={styles.infoContainer} elevation={2}>
+          <Text style={styles.nomeCarta}>{carta.name}</Text>
+
+          <View style={styles.linhaStatus}>
+            <View style={styles.badgeHp}>
+              <MaterialCommunityIcons name="heart-pulse" size={16} color="#FFF" />
+              <Text style={styles.textoBadge}>HP {carta.hp || '--'}</Text>
+            </View>
+            <View style={styles.badgeTipo}>
+              <MaterialCommunityIcons name="debian" size={16} color="#FFF" />
+              <Text style={styles.textoBadge}>{carta.types?.join(', ').toUpperCase() || 'NORMAL'}</Text>
+            </View>
+          </View>
+        </Surface>
+      </Surface>
 
       <Button
         mode="contained"
+        icon="pokeball"
         onPress={iniciarSalvamento}
-        style={{ marginHorizontal: 20, marginBottom: 20 }}
+        style={styles.botaoCapturar}
+        contentStyle={{ paddingVertical: 8 }}
+        labelStyle={styles.textoBotaoCapturar}
       >
-        Adicionar à Coleção
+        ADICIONAR À POKÉDEX
       </Button>
 
-      <View style={styles.secaoContainer}>
-        <Text style={styles.tituloSecao}>Ataques</Text>
-        {carta.attacks ? (
-          carta.attacks.map((ataque, index) => (
-            <View key={index} style={styles.ataqueItem}>
+      <Surface style={styles.secaoMercado} elevation={3}>
+        <View style={styles.tituloMercadoContainer}>
+          <MaterialCommunityIcons name="currency-usd" size={20} color="#ffcb05" />
+          <Text style={styles.tituloSecaoLCD}>CÂMBIO ATUAL</Text>
+        </View>
+        {renderizarPrecos()}
+        <Text style={styles.precoDica}>*Sincronização de dados recentes</Text>
+      </Surface>
+
+      <Surface style={styles.visorSecundario} elevation={3}>
+        <View style={styles.tituloAzulContainer}>
+          <MaterialCommunityIcons name="sword-cross" size={20} color="#0284c7" />
+          <Text style={styles.tituloSecaoAzul}>DADOS DE COMBATE</Text>
+        </View>
+
+        {carta.attacks && carta.attacks.length > 0 ? (
+          carta.attacks.map((atk, i) => (
+            <Surface key={i} style={styles.ataqueItem} elevation={1}>
               <View style={styles.ataqueCabecalho}>
-                <Text style={styles.ataqueNome}>{ataque.name}</Text>
-                <Text style={styles.ataqueDano}>{ataque.damage ? `${ataque.damage} Dano` : ''}</Text>
+                <View style={styles.ataqueNomeContainer}>
+                  <MaterialCommunityIcons name="flash" size={16} color="#f59e0b" />
+                  <Text style={styles.ataqueNome}>{atk.name.toUpperCase()}</Text>
+                </View>
+                <Text style={styles.ataqueDano}>{atk.damage || '--'}</Text>
               </View>
-              <Text style={styles.ataqueTexto}>{ataque.text || 'Sem efeito adicional.'}</Text>
-            </View>
+
+              <Text style={styles.ataqueTexto}>
+                {atk.text || 'Nenhum efeito secundário registrado.'}
+              </Text>
+            </Surface>
           ))
         ) : (
-          <Text style={styles.textoVazio}>Esta carta não possui ataques.</Text>
+          <Text style={{ textAlign: 'center', fontStyle: 'italic', marginTop: 10 }}>
+            Nenhum ataque mapeado.
+          </Text>
         )}
-      </View>
+      </Surface>
 
-      <View style={styles.secaoMercado}>
-        <Text style={styles.tituloSecaoBranco}>Mercado Atual (USD)</Text>
-        {renderizarPrecos()}
-        <Text style={styles.precoDica}>*Valores baseados em vendas recentes</Text>
-      </View>
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisivel}
-        onRequestClose={() => setModalVisivel(false)}
-      >
+      <Modal visible={modalVisivel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitulo}>Qual versão você possui?</Text>
+          <Surface style={styles.modalContent} elevation={5}>
+            <Text style={styles.modalTitulo}>SELECIONAR VARIANTE</Text>
 
-            {opcoesVariantes.map((tipo, index) => {
-              const nomeFormatado = tipo.charAt(0).toUpperCase() + tipo.slice(1)
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.botaoOpcao}
-                  onPress={() => confirmarSalvamento(tipo)}
-                >
-                  <Text style={styles.textoOpcao}>{nomeFormatado}</Text>
-                </TouchableOpacity>
-              )
-            })}
+            {opcoesVariantes.map((tipo, i) => (
+              <Button
+                key={i}
+                mode="contained-tonal"
+                icon="hexagram-outline"
+                onPress={() => confirmarSalvamento(tipo)}
+                style={{ marginBottom: 10 }}
+              >
+                {tipo.toUpperCase()}
+              </Button>
+            ))}
 
-            <TouchableOpacity
-              style={styles.botaoCancelar}
-              onPress={() => setModalVisivel(false)}
-            >
-              <Text style={styles.textoCancelar}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
+            <Button icon="cancel" onPress={() => setModalVisivel(false)} textColor="#dc2626">
+              Cancelar
+            </Button>
+          </Surface>
         </View>
       </Modal>
 
+      <View style={{ height: 30 }} />
     </ScrollView>
   )
 }
@@ -174,159 +214,223 @@ export default function DetalhesScreen({ route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#dc2626',
+    padding: 15,
   },
-  containerErro: {
-    flex: 1,
+  centerScreen: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   textoErro: {
-    fontSize: 18,
-    color: 'red',
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  pokedexHeader: {
+    flexDirection: 'row',
+    marginBottom: 15,
+  },
+  bigLightBorder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bigBlueLight: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#3b82f6',
+  },
+  smallLightsContainer: {
+    flexDirection: 'row',
+    marginLeft: 15,
+    marginTop: 5,
+  },
+  smallLight: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  visorPrincipal: {
+    backgroundColor: '#e0f2fe',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 4,
+    borderColor: '#cbd5e1',
   },
   imagemContainer: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    marginBottom: 15,
   },
   imagemCarta: {
-    width: 300,
-    height: 420,
-    borderRadius: 15,
+    width: 250,
+    height: 350,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#0003',
   },
   infoContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   nomeCarta: {
-    fontSize: 28,
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+    color: '#1e293b',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  linhaStatus: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  badgeHp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ef4444',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    gap: 4,
+  },
+  badgeTipo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    gap: 4,
+  },
+  textoBadge: {
+    color: '#FFF',
     fontWeight: 'bold',
-    color: '#333',
+    fontSize: 13,
+    fontFamily: 'monospace',
   },
-  subtitulo: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
+  botaoCapturar: {
+    backgroundColor: '#facc15',
+    borderRadius: 30,
+    marginBottom: 25,
+    borderWidth: 2,
+    borderColor: '#ca8a04',
   },
-  secaoContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  textoBotaoCapturar: {
+    fontWeight: '900',
+    color: '#422006',
+    letterSpacing: 1,
+    fontSize: 15,
   },
-  tituloSecao: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  secaoMercado: {
+    backgroundColor: '#262626',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 25,
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#404040',
+  },
+  tituloMercadoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 10,
-    color: '#e3350d',
-    borderBottomWidth: 2,
-    borderBottomColor: '#e3350d',
-    paddingBottom: 5,
+    gap: 5,
+  },
+  tituloSecaoLCD: {
+    color: '#ffcb05',
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  preco: {
+    color: '#4ade80',
+    fontFamily: 'monospace',
+    fontSize: 15,
+    marginVertical: 2,
+  },
+  precoDica: {
+    fontSize: 10,
+    color: '#737373',
+    marginTop: 10,
+    fontFamily: 'monospace',
+  },
+  visorSecundario: {
+    backgroundColor: '#e0f2fe',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 4,
+    borderColor: '#cbd5e1',
+  },
+  tituloAzulContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    gap: 8,
+  },
+  tituloSecaoAzul: {
+    fontWeight: '900',
+    color: '#0284c7',
+    fontSize: 16,
+    letterSpacing: 1,
   },
   ataqueItem: {
-    backgroundColor: '#fff',
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    marginBottom: 12,
+    backgroundColor: '#fff',
   },
   ataqueCabecalho: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 5,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  ataqueNomeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   ataqueNome: {
-    fontSize: 16,
     fontWeight: 'bold',
+    color: '#334155',
+    fontSize: 15,
   },
   ataqueDano: {
+    color: '#dc2626',
+    fontWeight: '900',
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#e3350d',
   },
   ataqueTexto: {
-    fontSize: 14,
-    color: '#555',
-  },
-  secaoMercado: {
-    backgroundColor: '#1d2c5e',
-    marginHorizontal: 20,
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 30,
-    alignItems: 'center',
-  },
-  tituloSecaoBranco: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffcb05',
-    marginBottom: 10,
-  },
-  precoDica: {
-    fontSize: 12,
-    color: '#aaa',
-    marginTop: 5,
-  },
-  precoDinâmico: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  textoVazio: {
-    fontSize: 14,
-    color: '#555',
+    color: '#64748b',
     fontStyle: 'italic',
+    fontSize: 13,
+    lineHeight: 18,
   },
-
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: '#0009',
     justifyContent: 'center',
-    alignItems: 'center',
   },
   modalContent: {
+    margin: 20,
+    padding: 20,
+    borderRadius: 12,
     backgroundColor: '#fff',
-    padding: 25,
-    borderRadius: 15,
-    width: '85%',
-    alignItems: 'stretch',
   },
   modalTitulo: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontWeight: '900',
+    marginBottom: 15,
     textAlign: 'center',
-    color: '#333',
-  },
-  botaoOpcao: {
-    backgroundColor: '#1d2c5e',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  textoOpcao: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  botaoCancelar: {
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 10,
-    alignItems: 'center',
-    backgroundColor: '#e5e7eb',
-  },
-  textoCancelar: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#1e293b',
   },
 })

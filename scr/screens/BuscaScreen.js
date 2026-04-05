@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native'
+import { View, FlatList, StyleSheet } from 'react-native'
+import { TextInput, Button, Card, Text, ActivityIndicator, Searchbar } from 'react-native-paper'
 import { buscarCartasPorNome } from '../api/api'
 import Carta from '../components/Carta'
 
@@ -19,104 +20,142 @@ export default function BuscaScreen({ navigation }) {
     setCarregando(true)
 
     try {
-      let cartasEncontradas = await buscarCartasPorNome(nomePokemon)
+      let resultado = await buscarCartasPorNome(nomePokemon)
 
       if (raridadeFiltro) {
-        cartasEncontradas = cartasEncontradas.filter(carta =>
-          carta.rarity?.toLowerCase().includes(raridadeFiltro.toLowerCase())
+        resultado = resultado.filter(c =>
+          c.rarity?.toLowerCase().includes(raridadeFiltro.toLowerCase())
         )
       }
 
       if (colecaoFiltro) {
-        cartasEncontradas = cartasEncontradas.filter(carta =>
-          carta.set?.name?.toLowerCase().includes(colecaoFiltro.toLowerCase())
+        resultado = resultado.filter(c =>
+          c.set?.name?.toLowerCase().includes(colecaoFiltro.toLowerCase())
         )
       }
 
-      cartasEncontradas.sort((a, b) => a.name.localeCompare(b.name))
-
-      setCartas(cartasEncontradas || [])
-
-    } catch (erro) {
-      alert("Erro ao buscar cartas")
+      setCartas(resultado)
+    } catch {
+      console.log('Erro ao buscar dados')
     } finally {
       setCarregando(false)
     }
   }
 
-  const limparBusca = () => {
+  const limpar = () => {
     setNomePokemon('')
-    setCartas([])
     setRaridadeFiltro('')
     setColecaoFiltro('')
+    setCartas([])
   }
 
   return (
     <View style={styles.container}>
 
-      <View style={styles.cabecalho}>
-        <Text style={styles.titulo}>Busca Pokémon TCG</Text>
-        <TouchableOpacity 
-          style={styles.botaoMinhasCartas} 
-          onPress={() => navigation.navigate('MyCards')} 
+      <View style={styles.headerContainer}>
+        <View style={styles.luzesWrapper}>
+          <View style={[styles.luz, styles.luzAzul]} />
+          <View style={[styles.luzPequena, styles.luzVermelha]} />
+          <View style={[styles.luzPequena, styles.luzAmarela]} />
+          <View style={[styles.luzPequena, styles.luzVerde]} />
+        </View>
+        
+        <Button 
+          mode="contained-tonal" 
+          icon="pokeball"
+          onPress={() => navigation.navigate('MyCards')}
+          style={styles.botaoMinhasCartas}
+          labelStyle={styles.textoMinhasCartas}
         >
-          <Text style={styles.textoMinhasCartas}>Minhas Cartas</Text>
-        </TouchableOpacity>
+          Minhas Cartas
+        </Button>
       </View>
 
-      <TextInput
-        style={styles.input}
+      <Searchbar
         placeholder="Buscar Pokémon (ex: Charizard)..."
         value={nomePokemon}
         onChangeText={setNomePokemon}
+        onIconPress={buscarCartas}
+        onSubmitEditing={buscarCartas}
+        style={styles.search}
+        inputStyle={styles.searchInput}
+        iconColor="#D32F2F"
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Filtrar por raridade (ex: Rare)"
-        value={raridadeFiltro}
-        onChangeText={setRaridadeFiltro}
-      />
+      <View style={styles.filtros}>
+        <TextInput
+          label="Raridade"
+          value={raridadeFiltro}
+          onChangeText={setRaridadeFiltro}
+          style={styles.input}
+          mode="outlined"
+          activeOutlineColor="#1976D2"
+          outlineColor="#E0E0E0"
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Filtrar por coleção (ex: Phantom Forces)"
-        value={colecaoFiltro}
-        onChangeText={setColecaoFiltro}
-      />
-
-      <View style={styles.botoes}>
-        <TouchableOpacity style={styles.botaoBuscar} onPress={buscarCartas}>
-          <Text style={styles.textoBotao}>Buscar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.botaoLimpar} onPress={limparBusca}>
-          <Text style={styles.textoBotaoLimpar}>Limpar</Text>
-        </TouchableOpacity>
+        <TextInput
+          label="Coleção"
+          value={colecaoFiltro}
+          onChangeText={setColecaoFiltro}
+          style={styles.input}
+          mode="outlined"
+          activeOutlineColor="#1976D2"
+          outlineColor="#E0E0E0"
+        />
       </View>
 
-      <View style={styles.listaContainer}>
+      <View style={styles.botoes}>
+        <Button 
+          mode="contained" 
+          onPress={buscarCartas}
+          style={styles.botaoBuscar}
+          icon="magnify"
+        >
+          Buscar
+        </Button>
+
+        <Button 
+          mode="outlined" 
+          onPress={limpar}
+          style={styles.botaoLimpar}
+          textColor="#757575"
+        >
+          Resetar
+        </Button>
+      </View>
+
+      <View style={styles.resultadoContainer}>
         {carregando ? (
-          <ActivityIndicator size="large" color="#333" />
+          <View style={styles.centerView}>
+            <ActivityIndicator size="large" color="#1976D2" />
+            <Text style={styles.loadingTexto}>Realizando busca...</Text>
+          </View>
         ) : cartas.length === 0 ? (
-          <Text style={styles.vazio}>Nenhuma carta encontrada</Text>
+          <View style={styles.centerView}>
+            <Text style={styles.vazioTexto}>Nenhum dado no visor atual.</Text>
+          </View>
         ) : (
           <FlatList
             data={cartas}
             keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ padding: 8 }}
             renderItem={({ item }) => (
-              <Carta
-                carta={item}
-                onPress={() =>
-                  navigation.navigate('Detalhes', { carta: item })
-                }
-              />
+              <Card style={styles.card} mode="elevated">
+                <Card.Content style={styles.cardContent}>
+                  <Carta 
+                    carta={item}
+                    onPress={() =>
+                      navigation.navigate('Detalhes', { carta: item })
+                    }
+                  />
+                </Card.Content>
+              </Card>
             )}
           />
         )}
       </View>
+
     </View>
   )
 }
@@ -125,81 +164,120 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#FAFAFA',
   },
-
-  cabecalho: {
+  headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
-  
-  titulo: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  luzesWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-
+  luz: {
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  luzAzul: {
+    backgroundColor: '#2196F3',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: '#BBDEFB',
+  },
+  luzPequena: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  luzVermelha: { 
+    backgroundColor: '#F44336' 
+  },
+  luzAmarela: { 
+    backgroundColor: '#FFC107' 
+  },
+  luzVerde: { 
+    backgroundColor: '#4CAF50' 
+  },
   botaoMinhasCartas: {
-    backgroundColor: '#10b981',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    backgroundColor: '#f443363b', 
+    borderColor: '#F44336',
+    borderWidth: 1,
   },
-
   textoMinhasCartas: {
-    color: '#fff',
+    color: '#F44336',
     fontWeight: 'bold',
-    fontSize: 14,
   },
-
+  search: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 0,
+  },
+  searchInput: {
+    fontSize: 16,
+  },
+  filtros: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
   input: {
-    backgroundColor: '#f2f2f2',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10,
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-
   botoes: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 20,
   },
-
   botaoBuscar: {
     flex: 1,
-    backgroundColor: '#2563eb',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
+    backgroundColor: '#D32F2F',
+    borderRadius: 8,
+    paddingVertical: 4,
   },
-
   botaoLimpar: {
     flex: 1,
-    backgroundColor: '#e5e7eb',
-    padding: 12,
-    borderRadius: 10,
+    borderColor: '#BDBDBD',
+    borderRadius: 8,
+    paddingVertical: 4,
+  },
+  resultadoContainer: {
+    flex: 1,
+    backgroundColor: '#F0F4F8',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#CFD8DC',
+    overflow: 'hidden',
+  },
+  centerView: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-
-  textoBotao: {
-    color: '#fff',
-    fontWeight: 'bold',
+  loadingTexto: {
+    marginTop: 12,
+    color: '#546E7A',
+    fontWeight: '500',
   },
-
-  textoBotaoLimpar: {
-    color: '#333',
-    fontWeight: 'bold',
+  vazioTexto: {
+    color: '#90A4AE',
+    fontStyle: 'italic',
   },
-
-  listaContainer: {
-    flex: 1, 
-    marginTop: 10,
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
   },
-
-  vazio: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#666',
-  },
+  cardContent: {
+    padding: 0,
+  }
 })
