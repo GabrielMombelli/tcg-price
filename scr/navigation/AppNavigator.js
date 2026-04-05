@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack'
 
 import BuscaScreen from '../screens/BuscaScreen'
 import DetalhesScreen from '../screens/DetalhesScreen'
+import MyCardsScreen from '../screens/MyCardsScreen' 
 
 const Stack = createStackNavigator()
 
@@ -22,6 +23,12 @@ export default function AppNavigator() {
           name="Detalhes" 
           component={DetalhesScreen} 
           options={{ title: 'Detalhes da Carta' }}
+        />
+
+        <Stack.Screen 
+          name="MyCards" 
+          component={MyCardsScreen} 
+          options={{ title: 'Minhas Cartas' }}
         />
 
       </Stack.Navigator>
