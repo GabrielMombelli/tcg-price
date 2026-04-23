@@ -1,10 +1,14 @@
 import React, { useState } from 'react'
 import { View, FlatList, StyleSheet } from 'react-native'
+// Uso da biblioteca react-native-paper para acelerar o desenvolvimento com componentes Material Design prontos
 import { TextInput, Button, Card, Text, ActivityIndicator, Searchbar } from 'react-native-paper'
 import { buscarCartasPorNome } from '../api/api'
 import Carta from '../components/Carta'
 
+
+// Componente Stateful: Diferente do componente 'Carta', este gerencia seus próprios estados
 export default function BuscaScreen({ navigation }) {
+  // HOOKS: Gerenciamento de estado local da tela
   const [nomePokemon, setNomePokemon] = useState('')
   const [cartas, setCartas] = useState([])
   const [carregando, setCarregando] = useState(false)
@@ -12,16 +16,20 @@ export default function BuscaScreen({ navigation }) {
   const [colecaoFiltro, setColecaoFiltro] = useState('')
 
   const buscarCartas = async () => {
+    // Early Return: Validação client-side para evitar requisições nulas na API
     if (nomePokemon.trim().length < 2) {
       alert("Digite pelo menos 2 letras do nome do Pokémon")
       return
     }
-
+    // UX: Aciona o feedback visual de carregamento antes da requisição iniciar
     setCarregando(true)
 
     try {
+      // Aguarda a resolução da Promise da API
       let resultado = await buscarCartasPorNome(nomePokemon)
 
+      // Filtragem em memória (Client-side): Otimiza a busca aplicando filtros 
+      // nos dados já baixados, sem precisar fazer uma nova chamada de rede
       if (raridadeFiltro) {
         resultado = resultado.filter(c =>
           c.rarity?.toLowerCase().includes(raridadeFiltro.toLowerCase())
@@ -38,10 +46,13 @@ export default function BuscaScreen({ navigation }) {
     } catch {
       console.log('Erro ao buscar dados')
     } finally {
+      // O bloco 'finally' garante que o loading seja desativado independentemente 
+      // se a requisição foi um sucesso (try) ou falhou (catch)
       setCarregando(false)
     }
   }
 
+  // Função utilitária para resetar todos os estados da tela para o valor inicial
   const limpar = () => {
     setNomePokemon('')
     setRaridadeFiltro('')
