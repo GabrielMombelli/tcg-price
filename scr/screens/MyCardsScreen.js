@@ -10,7 +10,7 @@ export default function MyCardsScreen({ navigation }) {
     const [loading, setLoading] = useState(true)
 
     // Diferente do useEffect normal, o useFocusEffect 
-    // dispara a função toda vez que o usuário *entra* ou *volta* para esta tela.
+    // dispara a função toda vez que o usuário entra ou volta para esta tela.
     // O useCallback evita que a função seja recriada desnecessariamente em cada renderização.
     useFocusEffect(
         useCallback(() => {
@@ -42,9 +42,8 @@ export default function MyCardsScreen({ navigation }) {
                     text: 'Confirmar',
                     style: 'destructive',
                     onPress: async () => {
-                        //O método .filter() cria um *novo* array sem a carta removida,
+                        //O método .filter() cria um novo array sem a carta removida,
                         // ao invés de mutar (alterar) o array original diretamente. 
-                        // Isso é uma regra de ouro no React para garantir a re-renderização correta.
                         const novasCartas = cartasSalvas.filter(c => c.idInstancia !== id)
                         setCartasSalvas(novasCartas)
                         await AsyncStorage.setItem('@minhasCartas', JSON.stringify(novasCartas))
