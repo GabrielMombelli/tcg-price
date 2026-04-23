@@ -1,15 +1,14 @@
 import React from 'react'
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native'
 
-// COMPONENTE FUNCIONAL (Stateless): Recebe os dados via 'props' (carta e onPress).
+//Recebe os dados via 'props' (carta e onPress).
 export default function Carta({ carta, onPress }) {
-// UX e INTERAÇÃO: O TouchableOpacity fornece feedback imediato ao usuário.
+// O TouchableOpacity fornece feedback imediato ao usuário.
 // O evento de clique (onPress) é passado para o componente pai (Inversão de Controle).
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       
       {/* 
-          Utilizamos o Optional Chaining (?.) na leitura de 'carta.images?.small'. 
           Isso previne um "Fatal Error" (Crash no aplicativo) caso a API retorne um payload incompleto ou sem a imagem. */}
       <Image
         source={{ uri: carta.images?.small }}

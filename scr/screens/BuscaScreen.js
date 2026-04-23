@@ -6,7 +6,6 @@ import { buscarCartasPorNome } from '../api/api'
 import Carta from '../components/Carta'
 
 
-// Componente Stateful: Diferente do componente 'Carta', este gerencia seus próprios estados
 export default function BuscaScreen({ navigation }) {
   // HOOKS: Gerenciamento de estado local da tela
   const [nomePokemon, setNomePokemon] = useState('')
@@ -28,8 +27,7 @@ export default function BuscaScreen({ navigation }) {
       // Aguarda a resolução da Promise da API
       let resultado = await buscarCartasPorNome(nomePokemon)
 
-      // Filtragem em memória (Client-side): Otimiza a busca aplicando filtros 
-      // nos dados já baixados, sem precisar fazer uma nova chamada de rede
+      // Otimiza a busca aplicando filtros nos dados já baixados, sem precisar fazer uma nova chamada de rede
       if (raridadeFiltro) {
         resultado = resultado.filter(c =>
           c.rarity?.toLowerCase().includes(raridadeFiltro.toLowerCase())
