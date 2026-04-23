@@ -9,6 +9,9 @@ export default function MyCardsScreen({ navigation }) {
     const [cartasSalvas, setCartasSalvas] = useState([])
     const [loading, setLoading] = useState(true)
 
+    // Diferente do useEffect normal, o useFocusEffect 
+    // dispara a função toda vez que o usuário *entra* ou *volta* para esta tela.
+    // O useCallback evita que a função seja recriada desnecessariamente em cada renderização.
     useFocusEffect(
         useCallback(() => {
             carregarCartas()
@@ -18,6 +21,7 @@ export default function MyCardsScreen({ navigation }) {
     const carregarCartas = async () => {
         try {
             setLoading(true)
+            // Leitura assíncrona do armazenamento local do dispositivo
             const dados = await AsyncStorage.getItem('@minhasCartas')
             setCartasSalvas(dados ? JSON.parse(dados) : [])
         } catch (erro) {
@@ -28,6 +32,7 @@ export default function MyCardsScreen({ navigation }) {
     }
 
     const removerCarta = (id) => {
+        // Previne exclusões acidentais
         Alert.alert(
             'Remover Registro',
             'Deseja remover esta entrada da Pokédex?',
@@ -37,6 +42,9 @@ export default function MyCardsScreen({ navigation }) {
                     text: 'Confirmar',
                     style: 'destructive',
                     onPress: async () => {
+                        //O método .filter() cria um *novo* array sem a carta removida,
+                        // ao invés de mutar (alterar) o array original diretamente. 
+                        // Isso é uma regra de ouro no React para garantir a re-renderização correta.
                         const novasCartas = cartasSalvas.filter(c => c.idInstancia !== id)
                         setCartasSalvas(novasCartas)
                         await AsyncStorage.setItem('@minhasCartas', JSON.stringify(novasCartas))
@@ -46,6 +54,8 @@ export default function MyCardsScreen({ navigation }) {
         )
     }
 
+    //Tenta buscar o preço específico da variante salva.
+    // Se falhar, busca o preço genérico (mid, market ou low). Se tudo falhar, retorna
     const obterPrecoCarta = (carta) => {
         if (carta.varianteSalva && carta.varianteSalva !== 'Padrão' && carta.tcgplayer?.prices) {
             const p = carta.tcgplayer.prices[carta.varianteSalva]
@@ -70,6 +80,9 @@ export default function MyCardsScreen({ navigation }) {
         return 0
     }
 
+    //Esta função calcula valores agregados "on the fly" 
+    // a partir do array 'cartasSalvas'. Isso evita a criação de múltiplos useStates para 
+    // totais, que poderiam facilmente ficar dessincronizados do array principal.
     const calcularResumo = () => {
         let valorTotal = 0
         let semValor = 0
@@ -137,6 +150,8 @@ export default function MyCardsScreen({ navigation }) {
 
             <Surface style={styles.visorPrincipal} elevation={5}>
                 {cartasSalvas.length === 0 ? (
+                    // EMPTY STATE (Estado Vazio): Tratamento amigável para quando o usuário não possui dados,
+                    // instruindo-o sobre o que fazer ao invés de mostrar uma tela em branco.
                     <View style={styles.vazioContainer}>
                         <Text style={styles.vazioTitulo}>BANCO DE DADOS VAZIO</Text>
                         <Text style={styles.vazioSubtitulo}>
@@ -146,6 +161,8 @@ export default function MyCardsScreen({ navigation }) {
                 ) : (
                     <FlatList
                         data={cartasSalvas}
+                        // O uso do 'idInstancia' no keyExtractor garante que, mesmo salvando a mesma 
+                        // carta duas vezes, o React saiba diferenciar qual elemento deletar na lista.
                         keyExtractor={(item) => item.idInstancia}
                         contentContainerStyle={styles.listaCartas}
                         showsVerticalScrollIndicator={false}

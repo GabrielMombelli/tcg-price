@@ -1,14 +1,18 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, View, Image, ScrollView, Alert, Modal } from 'react-native'
 import { Button, Surface } from 'react-native-paper'
+// Persistência de dados local (Offline-first): Alternativa nativa ao LocalStorage da web
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 export default function DetalhesScreen({ route }) {
+  //Extrai os dados da carta passados pela tela anterior via Stack Navigation
   const { carta } = route.params || {}
+  // Controle de estado para interface sobreposta (Overlay/Modal)
   const [modalVisivel, setModalVisivel] = useState(false)
   const [opcoesVariantes, setOpcoesVariantes] = useState([])
 
+  //Impede a renderização se o parâmetro for nulo
   if (!carta) {
     return (
       <View style={[styles.container, styles.centerScreen]}>
@@ -17,7 +21,9 @@ export default function DetalhesScreen({ route }) {
     )
   }
 
+  //Analisa a estrutura do JSON da API para decidir o fluxo de salvamento
   const iniciarSalvamento = () => {
+    //Extrai dinamicamente as chaves (tipos de preço) do objeto
     if (carta.tcgplayer?.prices) {
       const tipos = Object.keys(carta.tcgplayer.prices)
 
@@ -34,15 +40,18 @@ export default function DetalhesScreen({ route }) {
     confirmarSalvamento('Padrão')
   }
 
+  //Lida com leitura e gravação no sistema de arquivos do dispositivo
   const confirmarSalvamento = async (variante) => {
     setModalVisivel(false)
 
     try {
+      //Lê a string do banco e converte para Array JavaScript
       const data = await AsyncStorage.getItem('@minhasCartas')
       let cartas = data ? JSON.parse(data) : []
 
       cartas.push({
         ...carta,
+        // Gera um ID único na instância para permitir salvar a mesma carta múltiplas vezes
         idInstancia: `${carta.id}-${Date.now()}`,
         varianteSalva: variante
       })
@@ -54,6 +63,7 @@ export default function DetalhesScreen({ route }) {
     }
   }
 
+  //Constrói elementos JSX iterando sobre propriedades de um objeto complexo
 const renderizarPrecos = () => {
     const elementosPreco = []
 
@@ -89,7 +99,7 @@ const renderizarPrecos = () => {
         )
       }
     }
-
+    // Fallback visual caso a carta não tenha nenhum dado financeiro
     if (elementosPreco.length === 0) {
       return <Text style={styles.preco}>SEM DADOS DE MERCADO</Text>
     }
@@ -111,7 +121,7 @@ const renderizarPrecos = () => {
           <View style={[styles.smallLight, { backgroundColor: '#22c55e' }]} />
         </View>
       </View>
-
+      {/* SURFACE: Componente do Paper que aplica sombras e elevações nativas (Material Design) */}
       <Surface style={styles.visorPrincipal} elevation={4}>
         <View style={styles.imagemContainer}>
           <Image source={{ uri: carta.images?.large }} style={styles.imagemCarta} />
@@ -126,6 +136,7 @@ const renderizarPrecos = () => {
               <Text style={styles.textoBadge}>HP {carta.hp || '--'}</Text>
             </View>
             <View style={styles.badgeTipo}>
+              {/* Encadeamento de métodos (join e toUpperCase) para formatar a array de tipos */}
               <MaterialCommunityIcons name="debian" size={16} color="#FFF" />
               <Text style={styles.textoBadge}>{carta.types?.join(', ').toUpperCase() || 'NORMAL'}</Text>
             </View>
@@ -149,6 +160,7 @@ const renderizarPrecos = () => {
           <MaterialCommunityIcons name="currency-usd" size={20} color="#ffcb05" />
           <Text style={styles.tituloSecaoLCD}>CÂMBIO ATUAL</Text>
         </View>
+        {/* Chamada da função de renderização dinâmica de subcomponentes JSX */}
         {renderizarPrecos()}
         <Text style={styles.precoDica}>*Sincronização de dados recentes</Text>
       </Surface>
